@@ -18,9 +18,12 @@ const Home = () => {
     fetchCourses();
   }, []);
 
-  const handleClick = (name) => {
-    navigate(`/course/${name}`); // go to route
+  const handleClick = (course) => {
+    navigate(`/course/${course.name}`, {
+      state: { transcripts: course.transcripts },
+    });
   };
+  console.log(courses);
 
   return (
     <div style={{ padding: 30 }}>
@@ -29,7 +32,7 @@ const Home = () => {
         {courses.map((item) => (
           <div
             key={item._id}
-            onClick={() => handleClick(item.name)}
+            onClick={() => handleClick(item)}
             style={{
               cursor: "pointer",
               border: "solid",
