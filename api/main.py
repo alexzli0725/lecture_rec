@@ -8,7 +8,7 @@ app = FastAPI()
 
 MONGODB_URI = os.getenv(
     "MONGODB_URI",
-    "mongodb+srv://alexzli0725:alexzli0725@cluster0.y452mcg.mongodb.net/?retryWrites=true&w=majority",
+    "mongodb+srv://<USERNAME>:<PASSWORD>@cluster0.y452mcg.mongodb.net/?retryWrites=true&w=majority",
 )
 
 app.add_middleware(
