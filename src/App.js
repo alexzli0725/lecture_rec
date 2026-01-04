@@ -1,5 +1,21 @@
-// import React, { useState, useEffect, useRef } from "react";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import CourseDetail from "./CourseDetail.js";
+import Home from "./Home.js";
 
+const App = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/course/:name" element={<CourseDetail />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
+export default App;
 // const SpeechToText = () => {
 //   const [isRecording, setIsRecording] = useState(false);
 //   const [transcript, setTranscript] = useState("");
@@ -79,47 +95,47 @@
 
 // export default SpeechToText;
 
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+// import React, { useEffect, useState } from "react";
+// import axios from "axios";
 
-const App = () => {
-  const [courses, setCourses] = useState([]);
+// const App = () => {
+//   const [courses, setCourses] = useState([]);
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await axios.get("http://localhost:8000/courses");
-        setCourses(response.data);
-      } catch (e) {
-        console.log(e);
-      }
-    };
-    fetchCourses();
-  }, []);
+//   useEffect(() => {
+//     const fetchCourses = async () => {
+//       try {
+//         const response = await axios.get("http://localhost:8000/courses");
+//         setCourses(response.data);
+//       } catch (e) {
+//         console.log(e);
+//       }
+//     };
+//     fetchCourses();
+//   }, []);
 
-  console.log(courses);
+//   console.log(courses);
 
-  return (
-    <div style={{ padding: 30 }}>
-      <h1>Select Courses</h1>
-      <div style={{ display: "flex", gap: 20 }}>
-        {courses.map((item, index) => (
-          <div
-            style={{
-              border: "solid",
-              borderColor: "black",
-              borderWidth: 1,
-              width: 200,
-              height: 200,
-              boxShadow: "5px 5px 10px rgba(0, 0, 0, 0.4)",
-            }}
-          >
-            <h2 style={{ marginLeft: 30 }}>{item.name}</h2>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+//   return (
+//     <div style={{ padding: 30 }}>
+//       <h1>Select Courses</h1>
+//       <div style={{ display: "flex", gap: 20 }}>
+//         {courses.map((item, index) => (
+//           <div
+//             style={{
+//               border: "solid",
+//               borderColor: "black",
+//               borderWidth: 1,
+//               width: 200,
+//               height: 200,
+//               boxShadow: "5px 5px 10px rgba(0, 0, 0, 0.4)",
+//             }}
+//           >
+//             <h2 style={{ marginLeft: 30 }}>{item.name}</h2>
+//           </div>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// };
 
-export default App;
+// export default App;
