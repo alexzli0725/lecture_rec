@@ -1,165 +1,140 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import React, { useRef, useState } from "react";
 
 const Lecture = () => {
-  const { name } = useParams();
-  const location = useLocation();
-  const content = location.state?.content;
-
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
-  const recognitionRef = useRef(null);
+  const [audioBlob, setAudioBlob] = useState(null);
 
-  useEffect(() => {
-    // Check browser support
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Your browser does not support Speech Recognition.");
-      return;
-    }
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true; // Keep recording continuously
-    recognition.interimResults = true; // Show partial results
-    recognition.lang = "en-US"; // Language
-    recognitionRef.current = recognition;
+  // 🎙️ Start recording
+  const handleStartRecording = async () => {
+    setError("");
+    setTranscript("");
+    setAudioBlob(null);
 
-    recognition.onresult = (event) => {
-      let interimTranscript = "";
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcriptPart = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          setTranscript((prev) => prev + transcriptPart.trim() + ". ");
-        } else {
-          interimTranscript += transcriptPart;
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm",
+      });
+
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
         }
-      }
-    };
+      };
 
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
-    };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setAudioBlob(blob);
 
-    recognition.onend = () => {
-      if (isRecording) recognition.start(); // Auto-restart if recording
-    };
-  }, [isRecording]);
+        // stop mic
+        stream.getTracks().forEach((track) => track.stop());
+      };
 
-  const startRecording = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.start();
+      mediaRecorder.start();
+      mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
+    } catch (err) {
+      console.error(err);
+      setError("Microphone access denied or unavailable");
     }
   };
 
-  const stopRecording = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+  // ⏹️ Stop recording
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
   };
 
+  // 🧠 Transcribe
+  const handleTranscribe = async () => {
+    if (!audioBlob) {
+      setError("No audio recorded");
+      return;
+    }
+
+    setIsTranscribing(true);
+    setError("");
+    setTranscript("");
+
+    const formData = new FormData();
+    formData.append("file", audioBlob, "audio.webm");
+
+    const API_URL = "http://localhost:8000";
+
+    try {
+      const response = await fetch(`${API_URL}/api/transcribe`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTranscript(data.text || "");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Transcription failed";
+      setError(message);
+      console.error("Transcription error:", err);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleReset = () => {
+    setAudioBlob(null);
+    setTranscript("");
+    setError("");
+  };
   return (
     <div>
-      <button onClick={isRecording ? stopRecording : startRecording}>
-        {isRecording ? "Stop Recording" : "Start Recording"}
-      </button>
-      <button>add</button>
-      <div
-        style={{
-          marginTop: "20px",
-          padding: "10px",
-          border: "1px solid #ccc",
-          minHeight: "100px",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {transcript || "Your speech will appear here..."}
-      </div>
-      {content}
+      <header className="App-header">
+        <h2>Voice Transcription</h2>
+
+        {!isRecording ? (
+          <button onClick={handleStartRecording}>🎙️ Start Recording</button>
+        ) : (
+          <button onClick={handleStopRecording}>⏹️ Stop Recording</button>
+        )}
+
+        <button
+          onClick={handleTranscribe}
+          disabled={!audioBlob || isTranscribing}
+        >
+          {isTranscribing ? "Transcribing..." : "🧠 Transcribe"}
+        </button>
+
+        <button onClick={handleReset}>🔄 Reset</button>
+
+        {audioBlob && <audio controls src={URL.createObjectURL(audioBlob)} />}
+
+        {error && <p style={{ color: "red" }}>{error}</p>}
+
+        {transcript && (
+          <>
+            <h3>Transcript</h3>
+            <p>{transcript}</p>
+          </>
+        )}
+      </header>
     </div>
   );
 };
 
 export default Lecture;
-
-// const SpeechToText = () => {
-//   const [isRecording, setIsRecording] = useState(false);
-//   const [transcript, setTranscript] = useState("");
-//   const recognitionRef = useRef(null);
-
-//   useEffect(() => {
-//     // Check browser support
-//     const SpeechRecognition =
-//       window.SpeechRecognition || window.webkitSpeechRecognition;
-//     if (!SpeechRecognition) {
-//       alert("Your browser does not support Speech Recognition.");
-//       return;
-//     }
-
-//     const recognition = new SpeechRecognition();
-//     recognition.continuous = true; // Keep recording continuously
-//     recognition.interimResults = true; // Show partial results
-//     recognition.lang = "en-US"; // Language
-//     recognitionRef.current = recognition;
-
-//     recognition.onresult = (event) => {
-//       let interimTranscript = "";
-
-//       for (let i = event.resultIndex; i < event.results.length; i++) {
-//         const transcriptPart = event.results[i][0].transcript;
-//         if (event.results[i].isFinal) {
-//           setTranscript((prev) => prev + transcriptPart.trim() + ". ");
-//         } else {
-//           interimTranscript += transcriptPart;
-//         }
-//       }
-//     };
-
-//     recognition.onerror = (event) => {
-//       console.error("Speech recognition error:", event.error);
-//     };
-
-//     recognition.onend = () => {
-//       if (isRecording) recognition.start(); // Auto-restart if recording
-//     };
-//   }, [isRecording]);
-
-//   const startRecording = () => {
-//     if (recognitionRef.current) {
-//       recognitionRef.current.start();
-//       setIsRecording(true);
-//     }
-//   };
-
-//   const stopRecording = () => {
-//     if (recognitionRef.current) {
-//       recognitionRef.current.stop();
-//       setIsRecording(false);
-//     }
-//   };
-
-//   return (
-//     <div style={{ padding: "20px", fontFamily: "Arial" }}>
-//       <h1>Speech to Text (React)</h1>
-//       <button onClick={isRecording ? stopRecording : startRecording}>
-//         {isRecording ? "Stop Recording" : "Start Recording"}
-//       </button>
-//       <div
-//         style={{
-//           marginTop: "20px",
-//           padding: "10px",
-//           border: "1px solid #ccc",
-//           minHeight: "100px",
-//           whiteSpace: "pre-wrap",
-//         }}
-//       >
-//         {transcript || "Your speech will appear here..."}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default SpeechToText;
