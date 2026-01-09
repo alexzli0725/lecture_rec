@@ -1,16 +1,20 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from pymongo import MongoClient
+import shutil
+import tempfile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from bson import ObjectId
+from openai import OpenAI
 import os
+from dotenv import load_dotenv
 
 app = FastAPI()
 
-MONGODB_URI = os.getenv(
-    "MONGODB_URI",
-    "mongodb+srv://alexzli0725:alexzli0725@cluster0.y452mcg.mongodb.net/?retryWrites=true&w=majority",
-)
+load_dotenv()
+
+MONGODB_URI = os.getenv("MONGODB_URI")
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,3 +80,71 @@ def append_transcript_content(transcript_id: str, body: TranscriptUpdate):
         "message": "Transcript content appended successfully",
         "content": new_content,
     }
+
+
+def get_openai_client() -> OpenAI:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set in environment")
+    return OpenAI(api_key=api_key)
+
+
+MAX_FILE_SIZE = 25 * 1024 * 1024
+
+
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    temp_path = None
+    try:
+        if not file:
+            raise HTTPException(
+                status_code=400,
+                detail="No file uploaded. Please provide an audio file.",
+            )
+        contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail="File too large. Maximum size is 25MB.",
+            )
+        suffix = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            temp_path = tmp.name
+            tmp.write(contents)
+        print(f"Processing file: {file.filename} ({len(contents)} bytes)")
+
+        client = get_openai_client()
+
+        with open(temp_path, "rb") as audio_file:
+            response = client.audio.transcriptions.create(
+                file=audio_file,
+                model="whisper-1",
+                response_format="verbose_json",
+            )
+
+        print("Transcription complete")
+        return JSONResponse(
+            {
+                "text": response.text,
+                "language": response.language,
+                "durationSec": response.duration,
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Transcription error:", e)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Transcription failed. Please try again.",
+                "details": str(e) if os.getenv("NODE_ENV") == "development" else None,
+            },
+        )
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+                print(f"Cleaned up: {temp_path}")
+            except Exception as cleanup_error:
+                print("Failed to delete temporary file:", cleanup_error)

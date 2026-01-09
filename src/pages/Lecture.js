@@ -73,7 +73,7 @@ const Lecture = () => {
     const API_URL = "http://localhost:8000";
 
     try {
-      const response = await fetch(`${API_URL}/api/transcribe`, {
+      const response = await fetch(`${API_URL}/transcribe`, {
         method: "POST",
         body: formData,
       });
