@@ -135,37 +135,108 @@ const Lecture = () => {
   };
 
   return (
-    <div>
-      <header className="App-header">
-        <h2>Voice Transcription</h2>
-
-        {!isRecording ? (
-          <button onClick={handleStartRecording}>🎙️ Start Recording</button>
-        ) : (
-          <button onClick={handleStopRecording}>⏹️ Stop Recording</button>
-        )}
-
-        <button
-          onClick={handleTranscribe}
-          disabled={!audioBlob || isTranscribing}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+        // backgroundColor: "green",
+        flexDirection: "column",
+      }}
+    >
+      <h2>Voice Transcription</h2>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 18,
+          }}
         >
-          {isTranscribing ? "Transcribing..." : "🧠 Transcribe"}
-        </button>
+          {!isRecording ? (
+            <button
+              style={{
+                paddingLeft: 20,
+                paddingRight: 20,
+                paddingTop: 10,
+                paddingBottom: 10,
+                borderRadius: 13,
+              }}
+              onClick={handleStartRecording}
+            >
+              🎙️ Start Recording
+            </button>
+          ) : (
+            <button
+              style={{
+                paddingLeft: 20,
+                paddingRight: 20,
+                paddingTop: 10,
+                paddingBottom: 10,
+                borderRadius: 13,
+              }}
+              onClick={handleStopRecording}
+            >
+              ⏹️ Stop Recording
+            </button>
+          )}
 
-        <button onClick={handleReset}>🔄 Reset</button>
+          <button
+            style={{
+              paddingLeft: 20,
+              paddingRight: 20,
+              paddingTop: 10,
+              paddingBottom: 10,
+              borderRadius: 13,
+            }}
+            onClick={handleTranscribe}
+            disabled={!audioBlob || isTranscribing}
+          >
+            {isTranscribing ? "Transcribing..." : "🧠 Transcribe"}
+          </button>
 
+          <button
+            style={{
+              paddingLeft: 20,
+              paddingRight: 20,
+              paddingTop: 10,
+              paddingBottom: 10,
+              borderRadius: 13,
+            }}
+            onClick={handleReset}
+          >
+            🔄 Reset
+          </button>
+        </div>
         {audioBlob && <audio controls src={URL.createObjectURL(audioBlob)} />}
+      </div>
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
-
-        <h3>Transcript</h3>
-        {transcript && (
-          <>
-            <p>{transcript}</p>
-          </>
-        )}
-        <button onClick={addTranscription}>add script</button>
-      </header>
+      <h3>Transcript</h3>
+      {transcript && (
+        <>
+          <p>{transcript}</p>
+        </>
+      )}
+      <button
+        style={{
+          paddingLeft: 20,
+          paddingRight: 20,
+          paddingTop: 10,
+          paddingBottom: 10,
+          borderRadius: 13,
+        }}
+        onClick={addTranscription}
+      >
+        add script
+      </button>
     </div>
   );
 };
