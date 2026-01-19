@@ -1,4 +1,6 @@
+import axios from "axios";
 import React, { useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 const Lecture = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -7,8 +9,14 @@ const Lecture = () => {
   const [transcript, setTranscript] = useState("");
   const [audioBlob, setAudioBlob] = useState(null);
 
+  const location = useLocation();
+  const content = location.state?.content;
+  const id = location.state?.id;
+
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+
+  console.log(id);
 
   // 🎙️ Start recording
   const handleStartRecording = async () => {
@@ -55,7 +63,7 @@ const Lecture = () => {
       setIsRecording(false);
     }
   };
-
+  const API_URL = "http://localhost:8000";
   // 🧠 Transcribe
   const handleTranscribe = async () => {
     if (!audioBlob) {
@@ -69,8 +77,6 @@ const Lecture = () => {
 
     const formData = new FormData();
     formData.append("file", audioBlob, "audio.webm");
-
-    const API_URL = "http://localhost:8000";
 
     try {
       const response = await fetch(`${API_URL}/transcribe`, {
@@ -102,6 +108,32 @@ const Lecture = () => {
     setTranscript("");
     setError("");
   };
+
+  const addTranscription = async () => {
+    try {
+      const response = await fetch(`${API_URL}/lecture/${id}/append`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          transcript: transcript,
+        }),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text);
+      }
+
+      const data = await response.json();
+      setTranscript(data.content || "");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Add failed";
+      setError(message);
+      console.error("Add error:", err);
+    }
+  };
+
   return (
     <div>
       <header className="App-header">
@@ -126,12 +158,13 @@ const Lecture = () => {
 
         {error && <p style={{ color: "red" }}>{error}</p>}
 
+        <h3>Transcript</h3>
         {transcript && (
           <>
-            <h3>Transcript</h3>
             <p>{transcript}</p>
           </>
         )}
+        <button onClick={addTranscription}>add script</button>
       </header>
     </div>
   );
